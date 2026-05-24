@@ -47,6 +47,23 @@
   // Initialize
   setBpm(DEFAULT_BPM);
 
+  // Center the active pill in its scroll container so it's always visible on
+  // load — and again when the layout flips between orientations (landscape's
+  // vertical scroll becomes portrait's horizontal scroll, resetting position).
+  // After this we leave the scroll alone; the user can scroll manually.
+  function scrollActiveBpmIntoView() {
+    const active = $bpmPills.find((pill) => pill.classList.contains('bpm__pill--active'));
+    if (!active) return;
+    // block + inline together work for whichever axis is currently scrollable;
+    // the browser ignores the one that doesn't apply.
+    active.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+  }
+
+  requestAnimationFrame(scrollActiveBpmIntoView);
+  window.matchMedia('(orientation: portrait)').addEventListener('change', () => {
+    requestAnimationFrame(scrollActiveBpmIntoView);
+  });
+
   // ---------- Audio ----------
   let audioCtx = null;
 
