@@ -39,4 +39,35 @@
 
   // Initialize
   setBpm(DEFAULT_BPM);
+
+  // ---------- Audio ----------
+  let audioCtx = null;
+
+  function ensureAudioContext() {
+    if (audioCtx) return audioCtx;
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    audioCtx = new Ctor();
+    return audioCtx;
+  }
+
+  function playBeep(time, isAccent) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = isAccent ? 1500 : 800;
+    const duration = isAccent ? 0.08 : 0.05;
+    const peak = isAccent ? 0.5 : 0.35;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(peak, time + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(time);
+    osc.stop(time + duration + 0.02);
+  }
+
+  // Expose for manual console verification during development.
+  // Removed in Task 4 once the scheduler drives playback.
+  window.__metronomeDebug = { ensureAudioContext, playBeep, getCtx: () => audioCtx };
 })();
