@@ -10,10 +10,16 @@
   <body>
     <main class="app">
       <div class="play-zone" id="playZone" role="button" aria-label="Start or stop the metronome" tabindex="0">
-        <button class="subdivisions-toggle" id="subdivisionsToggle" type="button"
-                aria-pressed="false" aria-label="Subdivisions: play a tick on every &quot;and&quot;">
-          2×
-        </button>
+        <div class="play-zone__controls" id="playZoneControls">
+          <button class="control-toggle" id="prebeatToggle" type="button"
+                  aria-pressed="false" aria-label="Pre-beat count-in length: 1 or 2 bars">
+            Pre-beat 1
+          </button>
+          <button class="control-toggle" id="subdivisionsToggle" type="button"
+                  aria-pressed="false" aria-label="2× support: play a tick on every &quot;and&quot;">
+            2× support
+          </button>
+        </div>
 
         <section class="beats" aria-label="Beat indicators">
           <div class="beat beat--accent" data-beat="1"></div>

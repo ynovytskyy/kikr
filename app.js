@@ -12,7 +12,9 @@
     currentBeat: 0,   // 1..4 while playing, 0 when idle
     currentBar: 0,    // 1..MAX_BARS while playing, 0 when idle
     isPlaying: false,
-    subdivisions: false,  // When true, also click on every "and" (8th notes).
+    subdivisions: false,    // When true, also click on every "and" (8th notes).
+    prebeatBars: 1,         // Setting: count-in length, 1 or 2 bars.
+    prebeatBeatsRemaining: 0, // Runtime: counts down through the count-in phase.
     // Bumped on every start/stop/autoStop. Pending setTimeouts capture the
     // session ID at scheduling time and bail out if it has changed, so
     // callbacks from a previous session can't corrupt a new one.
@@ -23,7 +25,9 @@
   const $app = document.querySelector('.app');
   const $barCurrent = document.getElementById('barCurrent');
   const $playZone = document.getElementById('playZone');
+  const $playZoneControls = document.getElementById('playZoneControls');
   const $subdivisionsToggle = document.getElementById('subdivisionsToggle');
+  const $prebeatToggle = document.getElementById('prebeatToggle');
   const $beats = Array.from(document.querySelectorAll('.beat'));
   const $bpmPills = Array.from(document.querySelectorAll('.bpm__pill'));
 
@@ -75,16 +79,22 @@
     return audioCtx;
   }
 
-  // kind: 'accent' (beat 1), 'normal' (beats 2/3/4), or 'sub' ("and" subdivisions)
+  // kind:
+  //   'accent'  — beat 1 of each bar (round, prominent)
+  //   'normal'  — beats 2/3/4
+  //   'sub'     — "and" subdivisions (lighter, brighter)
+  //   'countin' — pre-beat stick-click (short, dry, high-pitched)
   function playBeep(time, kind) {
     if (!audioCtx) return;
     let frequency, duration, peak;
     if (kind === 'accent') {
-      frequency = 1500; duration = 0.08; peak = 0.5;
+      frequency = 1500; duration = 0.08; peak = 0.85;
     } else if (kind === 'sub') {
-      frequency = 1000; duration = 0.035; peak = 0.18;
+      frequency = 1000; duration = 0.035; peak = 0.35;
+    } else if (kind === 'countin') {
+      frequency = 2500; duration = 0.025; peak = 0.55;
     } else { // 'normal'
-      frequency = 800; duration = 0.05; peak = 0.35;
+      frequency = 800; duration = 0.05; peak = 0.65;
     }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -143,10 +153,33 @@
     if (!state.isPlaying) return;
     const session = state.sessionId;
     while (nextNoteTime < audioCtx.currentTime + SCHEDULE_AHEAD_S) {
+      const secondsPerBeat = 60.0 / state.bpm;
+      const lagMs = Math.max(0, (nextNoteTime - audioCtx.currentTime) * 1000);
+
+      // ---- Count-in phase ----
+      if (state.prebeatBeatsRemaining > 0) {
+        const totalCountin = state.prebeatBars * BEATS_PER_BAR;
+        const elapsed = totalCountin - state.prebeatBeatsRemaining;
+        const countinBeat = (elapsed % BEATS_PER_BAR) + 1;
+
+        playBeep(nextNoteTime, 'countin');
+
+        setTimeout(() => {
+          if (state.sessionId !== session) return;
+          // Light the corresponding circle; show 0 in the bar counter to
+          // signal we haven't started the real count yet.
+          renderBeat(countinBeat, 0);
+        }, lagMs);
+
+        state.prebeatBeatsRemaining -= 1;
+        nextNoteTime += secondsPerBeat;
+        continue;
+      }
+
+      // ---- Normal playback phase ----
       const beat = state.currentBeat; // 1..4
       const bar = state.currentBar;   // 1..MAX_BARS
       const kind = beat === 1 ? 'accent' : 'normal';
-      const secondsPerBeat = 60.0 / state.bpm;
 
       playBeep(nextNoteTime, kind);
 
@@ -156,7 +189,6 @@
         playBeep(nextNoteTime + secondsPerBeat / 2, 'sub');
       }
 
-      const lagMs = Math.max(0, (nextNoteTime - audioCtx.currentTime) * 1000);
       setTimeout(() => {
         if (state.sessionId !== session) return;
         renderBeat(beat, bar);
@@ -215,11 +247,14 @@
     acquireWakeLock();
 
     state.isPlaying = true;
+    state.prebeatBeatsRemaining = state.prebeatBars * BEATS_PER_BAR;
     state.currentBar = 1;
     state.currentBeat = 1;
     nextNoteTime = ctx.currentTime + 0.05;
 
-    renderBar();
+    // During count-in we show 0 in the bar counter; the real count starts
+    // at 1 once prebeatBeatsRemaining hits zero.
+    $barCurrent.textContent = state.prebeatBeatsRemaining > 0 ? '0' : '1';
     clearBeatHighlights();
     $playZone.classList.add('is-playing');
 
@@ -235,6 +270,7 @@
     }
     releaseWakeLock();
     state.isPlaying = false;
+    state.prebeatBeatsRemaining = 0;
     state.currentBar = 0;
     state.currentBeat = 0;
     renderBar();
@@ -251,6 +287,7 @@
     }
     releaseWakeLock();
     state.isPlaying = false;
+    state.prebeatBeatsRemaining = 0;
     state.currentBeat = 0;
     // Leave state.currentBar at MAX_BARS for visual feedback. start() resets it.
     clearBeatHighlights();
@@ -268,14 +305,30 @@
     $playZone.blur();
   });
 
-  // The subdivisions toggle is inside the play zone, so its click would
-  // bubble up and toggle playback. Stop the click there and just flip state.
-  $subdivisionsToggle.addEventListener('click', (event) => {
+  // The toggle cluster lives inside the play zone; stop its clicks (on the
+  // buttons or any padding between them) from bubbling up and toggling play.
+  $playZoneControls.addEventListener('click', (event) => {
     event.stopPropagation();
+  });
+
+  $subdivisionsToggle.addEventListener('click', () => {
     state.subdivisions = !state.subdivisions;
     $subdivisionsToggle.setAttribute('aria-pressed', String(state.subdivisions));
     $subdivisionsToggle.blur();
   });
+
+  function setPrebeatBars(bars) {
+    state.prebeatBars = bars;
+    $prebeatToggle.textContent = `Pre-beat ${bars}`;
+    $prebeatToggle.setAttribute('aria-pressed', String(bars === 2));
+  }
+
+  $prebeatToggle.addEventListener('click', () => {
+    setPrebeatBars(state.prebeatBars === 2 ? 1 : 2);
+    $prebeatToggle.blur();
+  });
+
+  setPrebeatBars(state.prebeatBars);
 
   document.addEventListener('keydown', (event) => {
     if (event.code !== 'Space' && event.key !== ' ') return;
