@@ -40,6 +40,7 @@ html, body {
 /* ---------- Play zone (left + center, tappable) ---------- */
 
 .play-zone {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   flex-direction: row;
@@ -51,6 +52,32 @@ html, body {
   cursor: pointer;
   outline: none;
   transition: background 120ms linear;
+}
+
+/* ---------- Subdivisions toggle (2×) ---------- */
+
+.subdivisions-toggle {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 2;
+  width: 56px;
+  height: 44px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 120ms linear, color 120ms linear, border-color 120ms linear;
+}
+
+.subdivisions-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  color: #0a0a0a;
+  border-color: var(--accent);
 }
 
 .play-zone:focus-visible {
@@ -247,5 +274,12 @@ html, body {
     width: clamp(80px, 22vw, 120px);
     height: 100%;
     min-height: 0;
+  }
+
+  /* Move the 2× toggle to the bottom-right corner of the play zone. */
+  .subdivisions-toggle {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
   }
 }

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const PRESET_BPMS = [80, 90, 100, 110, 120];
+  const PRESET_BPMS = [60, 70, 80, 90, 100, 110, 120];
   const DEFAULT_BPM = 100;
   const MAX_BARS = 8;
   const BEATS_PER_BAR = 4;
@@ -12,6 +12,7 @@
     currentBeat: 0,   // 1..4 while playing, 0 when idle
     currentBar: 0,    // 1..MAX_BARS while playing, 0 when idle
     isPlaying: false,
+    subdivisions: false,  // When true, also click on every "and" (8th notes).
     // Bumped on every start/stop/autoStop. Pending setTimeouts capture the
     // session ID at scheduling time and bail out if it has changed, so
     // callbacks from a previous session can't corrupt a new one.
@@ -22,6 +23,7 @@
   const $app = document.querySelector('.app');
   const $barCurrent = document.getElementById('barCurrent');
   const $playZone = document.getElementById('playZone');
+  const $subdivisionsToggle = document.getElementById('subdivisionsToggle');
   const $beats = Array.from(document.querySelectorAll('.beat'));
   const $bpmPills = Array.from(document.querySelectorAll('.bpm__pill'));
 
@@ -56,14 +58,21 @@
     return audioCtx;
   }
 
-  function playBeep(time, isAccent) {
+  // kind: 'accent' (beat 1), 'normal' (beats 2/3/4), or 'sub' ("and" subdivisions)
+  function playBeep(time, kind) {
     if (!audioCtx) return;
+    let frequency, duration, peak;
+    if (kind === 'accent') {
+      frequency = 1500; duration = 0.08; peak = 0.5;
+    } else if (kind === 'sub') {
+      frequency = 1000; duration = 0.035; peak = 0.18;
+    } else { // 'normal'
+      frequency = 800; duration = 0.05; peak = 0.35;
+    }
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = isAccent ? 1500 : 800;
-    const duration = isAccent ? 0.08 : 0.05;
-    const peak = isAccent ? 0.5 : 0.35;
+    osc.frequency.value = frequency;
     gain.gain.setValueAtTime(0.0001, time);
     gain.gain.exponentialRampToValueAtTime(peak, time + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
@@ -119,9 +128,16 @@
     while (nextNoteTime < audioCtx.currentTime + SCHEDULE_AHEAD_S) {
       const beat = state.currentBeat; // 1..4
       const bar = state.currentBar;   // 1..MAX_BARS
-      const isAccent = beat === 1;
+      const kind = beat === 1 ? 'accent' : 'normal';
+      const secondsPerBeat = 60.0 / state.bpm;
 
-      playBeep(nextNoteTime, isAccent);
+      playBeep(nextNoteTime, kind);
+
+      // If 8th-note subdivisions are on, schedule the "and" tick between this
+      // beat and the next. Visual indicators still only flash on main beats.
+      if (state.subdivisions) {
+        playBeep(nextNoteTime + secondsPerBeat / 2, 'sub');
+      }
 
       const lagMs = Math.max(0, (nextNoteTime - audioCtx.currentTime) * 1000);
       setTimeout(() => {
@@ -131,8 +147,11 @@
 
       const isLastBeat = bar === MAX_BARS && beat === BEATS_PER_BAR;
       if (isLastBeat) {
-        // Let the queued audio play out, then auto-stop. Keep the bar at MAX_BARS.
-        const audioTailMs = 150;
+        // Let the queued audio play out, then auto-stop. When subdivisions are
+        // on, the "and of 4" of bar 8 needs to finish playing first, so wait
+        // half a beat longer before declaring the count done.
+        const subdivTailMs = state.subdivisions ? (secondsPerBeat * 1000) / 2 : 0;
+        const audioTailMs = subdivTailMs + 150;
         setTimeout(() => {
           if (state.sessionId !== session) return;
           autoStop();
@@ -142,7 +161,7 @@
         return;
       }
 
-      nextNoteTime += 60.0 / state.bpm;
+      nextNoteTime += secondsPerBeat;
       state.currentBeat += 1;
       if (state.currentBeat > BEATS_PER_BAR) {
         state.currentBeat = 1;
@@ -230,6 +249,15 @@
   $playZone.addEventListener('click', () => {
     toggle();
     $playZone.blur();
+  });
+
+  // The subdivisions toggle is inside the play zone, so its click would
+  // bubble up and toggle playback. Stop the click there and just flip state.
+  $subdivisionsToggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.subdivisions = !state.subdivisions;
+    $subdivisionsToggle.setAttribute('aria-pressed', String(state.subdivisions));
+    $subdivisionsToggle.blur();
   });
 
   document.addEventListener('keydown', (event) => {
