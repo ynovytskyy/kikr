@@ -182,4 +182,21 @@
     toggle();
     $startStop.blur();
   });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.code !== 'Space' && event.key !== ' ') return;
+    // Ignore if a button has focus — the browser would already activate it on space,
+    // and we don't want a double-trigger. blur() in click handlers above guards against this,
+    // but this is belt-and-braces.
+    const tag = (event.target && event.target.tagName) || '';
+    if (tag === 'BUTTON') return;
+    event.preventDefault();
+    toggle();
+  });
+
+  // ---------- Initial feature check ----------
+  if (!(window.AudioContext || window.webkitAudioContext)) {
+    $startStop.textContent = 'AUDIO UNAVAILABLE';
+    $startStop.disabled = true;
+  }
 })();
