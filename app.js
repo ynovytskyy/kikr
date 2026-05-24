@@ -12,6 +12,10 @@
     currentBeat: 0,   // 1..4 while playing, 0 when idle
     currentBar: 0,    // 1..MAX_BARS while playing, 0 when idle
     isPlaying: false,
+    // Bumped on every start/stop/autoStop. Pending setTimeouts capture the
+    // session ID at scheduling time and bail out if it has changed, so
+    // callbacks from a previous session can't corrupt a new one.
+    sessionId: 0,
   };
 
   // ---------- DOM ----------
@@ -110,6 +114,7 @@
 
   function scheduler() {
     if (!state.isPlaying) return;
+    const session = state.sessionId;
     while (nextNoteTime < audioCtx.currentTime + SCHEDULE_AHEAD_S) {
       const beat = state.currentBeat; // 1..4
       const bar = state.currentBar;   // 1..MAX_BARS
@@ -118,13 +123,19 @@
       playBeep(nextNoteTime, isAccent);
 
       const lagMs = Math.max(0, (nextNoteTime - audioCtx.currentTime) * 1000);
-      setTimeout(() => renderBeat(beat, bar), lagMs);
+      setTimeout(() => {
+        if (state.sessionId !== session) return;
+        renderBeat(beat, bar);
+      }, lagMs);
 
       const isLastBeat = bar === MAX_BARS && beat === BEATS_PER_BAR;
       if (isLastBeat) {
         // Let the queued audio play out, then auto-stop. Keep the bar at MAX_BARS.
         const audioTailMs = 150;
-        setTimeout(() => autoStop(), lagMs + audioTailMs);
+        setTimeout(() => {
+          if (state.sessionId !== session) return;
+          autoStop();
+        }, lagMs + audioTailMs);
         clearInterval(schedulerInterval);
         schedulerInterval = null;
         return;
@@ -145,9 +156,7 @@
   }
 
   function renderBeat(beat, bar) {
-    // beat is 1..4; only render if the state still reflects the same bar
-    // (avoid stale updates after stop).
-    if (!state.isPlaying && bar !== MAX_BARS) return;
+    // Callers verify the session ID before invoking, so this just writes the DOM.
     $barCurrent.textContent = String(bar);
     $beats.forEach((el, idx) => {
       el.classList.toggle('is-active', idx === beat - 1);
@@ -159,10 +168,13 @@
   }
 
   // ---------- Playback lifecycle ----------
-  function start() {
+  async function start() {
     const ctx = ensureAudioContext();
     if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
+    // Await the resume so ctx.currentTime is meaningful by the time we use it.
+    // iOS Safari starts the AudioContext suspended and resumes asynchronously.
+    if (ctx.state === 'suspended') await ctx.resume();
+    state.sessionId += 1;
     acquireWakeLock();
 
     state.isPlaying = true;
@@ -180,6 +192,7 @@
   }
 
   function stop() {
+    state.sessionId += 1;
     if (schedulerInterval) {
       clearInterval(schedulerInterval);
       schedulerInterval = null;
@@ -196,6 +209,7 @@
 
   function autoStop() {
     // Like stop(), but leaves the bar counter at MAX_BARS so the drummer sees they finished.
+    state.sessionId += 1;
     if (schedulerInterval) {
       clearInterval(schedulerInterval);
       schedulerInterval = null;
