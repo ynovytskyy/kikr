@@ -31,15 +31,17 @@ Existing metronome apps miss what actually matters to a drummer — counting bar
 
 My opening prompt (verbatim throughout this post, typos included):
 
-> Build me simple single page website that will be used mostly on small devices like phone or tablet as a metronome for drummers.
->
-> In this fist version I want just 4/4 beat support. Palying metronome sounds as beeps but different, more expressive beep on the first beep of the bar.
-> The user should be able to quickly select preconfigured bpm speed rather than typing in or going through +/- increments. I'm not sure yet what the preconfigured beats will be best (that will be a product experiment in the future) but for now let's have 80, 90, 100, 110, and 120
->
-> Distinctive features:
-> * Bar counter - It's important for drummers to count the structure of the pattern - So it should display the bar number and stop after eight bars
-> * Simple controls like start/stop with the hit of a space bar or a tap on something really large on the screen, or maybe the whole screen (probably not the whole screen because bit selection should be selecting the BPM rather than stop and start)
-> * Visually what should be on the screen would be the bar counter, the visual representation of the bits and  BPM selection
+```
+Build me simple single page website that will be used mostly on small devices like phone or tablet as a metronome for drummers.
+
+In this fist version I want just 4/4 beat support. Palying metronome sounds as beeps but different, more expressive beep on the first beep of the bar.
+The user should be able to quickly select preconfigured bpm speed rather than typing in or going through +/- increments. I'm not sure yet what the preconfigured beats will be best (that will be a product experiment in the future) but for now let's have 80, 90, 100, 110, and 120
+
+Distinctive features:
+* Bar counter - It's important for drummers to count the structure of the pattern - So it should display the bar number and stop after eight bars
+* Simple controls like start/stop with the hit of a space bar or a tap on something really large on the screen, or maybe the whole screen (probably not the whole screen because bit selection should be selecting the BPM rather than stop and start)
+* Visually what should be on the screen would be the bar counter, the visual representation of the bits and  BPM selection
+```
 
 Claude Code didn't start coding. It invoked a brainstorming skill, asked three clarifying questions (auto-stop behavior, which presets to ship, screen wake lock), and wrote a short spec. I replied *"init git and proceed with implementation plan."* It produced a six-task plan and dispatched a team of subagents — one implementer per task, plus a spec-compliance reviewer and a code-quality reviewer behind each.
 
@@ -59,15 +61,17 @@ I opened it on my phone, started using it, and immediately found things to chang
 
 The call that needed a drummer. Landscape is how the device sits on the kit during practice.
 
-> Looks good, But we need another iteration on UX/UI.
-> This is the screenshot of how it looks in a browser that emulates phone dimensions in landscape mode and the landscape mode is what I want to target as a primary mode for version one.
-> @~/Downloads/metronome-v0.1.jpg
->
-> I would like to gain maximum visibility of important elements and therefore I would like to redesign it in the following way:
-> - BPM selection should be a column on the rightmost side of the screen. Also since we are going to potentially later on in later versions add more BPM pre-selections, I want that vertical column of BPMs to be scrollable up and down in case the list of BPM preselections becomes longer
-> - Bit indicators within the bar should also be vertical on the left-most side of the screen again in order to gain the most space for the central part of the screen
-> - The bar counter will become the largest element on the screen in the center, in the same way as it is right now but it will become larger
-> - Remove the start button. Its functionality is going to be when pressing or tapping on the bar counter or the leftmost side of the screen, which is the bit indicator. Basically whenever you click anything except the BPM selector, it should work similarly to the start button. It's going to start or stop.
+```
+Looks good, But we need another iteration on UX/UI.
+This is the screenshot of how it looks in a browser that emulates phone dimensions in landscape mode and the landscape mode is what I want to target as a primary mode for version one.
+@~/Downloads/metronome-v0.1.jpg
+
+I would like to gain maximum visibility of important elements and therefore I would like to redesign it in the following way:
+- BPM selection should be a column on the rightmost side of the screen. Also since we are going to potentially later on in later versions add more BPM pre-selections, I want that vertical column of BPMs to be scrollable up and down in case the list of BPM preselections becomes longer
+- Bit indicators within the bar should also be vertical on the left-most side of the screen again in order to gain the most space for the central part of the screen
+- The bar counter will become the largest element on the screen in the center, in the same way as it is right now but it will become larger
+- Remove the start button. Its functionality is going to be when pressing or tapping on the bar counter or the leftmost side of the screen, which is the bit indicator. Basically whenever you click anything except the BPM selector, it should work similarly to the start button. It's going to start or stop.
+```
 
 Result: 3-column layout, the bar counter as a giant tap-anywhere play/stop zone.
 
@@ -75,11 +79,13 @@ Result: 3-column layout, the bar counter as a giant tap-anywhere play/stop zone.
 
 The landscape rules broke portrait. The BPM column ran off the right edge.
 
-> Looks good, And exactly what I was looking for , but we need to do some fixing with UI for the portrait mode. The landscape mode is the primary target but all modes should be usable and UX friendly.
->
-> Look at @~/Downloads/metronome-v0.2.jpg to see the problem.
->
-> The way I suggest to fix it is conceptually similar to how we designed the landscape mode but in the portrait mode we want to gain space by showing it in three rows rather than three columns in landscape mode. So the top row would show the beat indicator in a horizontal way and the bottom-most row will be showing the BPM selectors but in this case scrollable horizontally.
+```
+Looks good, And exactly what I was looking for , but we need to do some fixing with UI for the portrait mode. The landscape mode is the primary target but all modes should be usable and UX friendly.
+
+Look at @~/Downloads/metronome-v0.2.jpg to see the problem.
+
+The way I suggest to fix it is conceptually similar to how we designed the landscape mode but in the portrait mode we want to gain space by showing it in three rows rather than three columns in landscape mode. So the top row would show the beat indicator in a horizontal way and the bottom-most row will be showing the BPM selectors but in this case scrollable horizontally.
+```
 
 ![The portrait bug](docs/metronome-v0.2.jpg)
 *What I sent Claude — landscape worked, portrait was clipped.*
@@ -90,8 +96,10 @@ Result: 3-row portrait layout, BPM strip scrollable horizontally.
 
 The controls I knew I'd want after one practice session with the app.
 
-> - add 60 and 70 as another BPM presets (before 80)
-> - a "2x" checkbox in upper right corener of the "play area" in landscape mode, and bottom right when in the portrait mode - It is going to add metronome ticks on every sub-bit, effectively making it an 8-bit - That's going to be useful when starting to practice harder, more intricate beats for the drummers and get more support from the metronome on "and" sub-bits.
+```
+- add 60 and 70 as another BPM presets (before 80)
+- a "2x" checkbox in upper right corener of the "play area" in landscape mode, and bottom right when in the portrait mode - It is going to add metronome ticks on every sub-bit, effectively making it an 8-bit - That's going to be useful when starting to practice harder, more intricate beats for the drummers and get more support from the metronome on "and" sub-bits.
+```
 
 Result: presets added, 2× toggle wired correctly — including the auto-stop edge case where a sub-beat tick after the final main beat would otherwise fire after the stop.
 
@@ -99,7 +107,9 @@ Result: presets added, 2× toggle wired correctly — including the auto-stop ed
 
 After adding 60 and 70, the default (100) was off-screen until you scrolled.
 
-> - one fix: when in portrait mode, the default BPM preset is 100, but not visible in the list - need to autoscroll so that the selected BPM preset in as close to the middle of the scroll area as possible making it alaways visible when loading (until user scrolls manually). Analogous fix for the landscape mode for when the list of the presets might become longer and cause the same issue.
+```
+- one fix: when in portrait mode, the default BPM preset is 100, but not visible in the list - need to autoscroll so that the selected BPM preset in as close to the middle of the scroll area as possible making it alaways visible when loading (until user scrolls manually). Analogous fix for the landscape mode for when the list of the presets might become longer and cause the same issue.
+```
 
 Result: auto-center on load, and on orientation flip.
 
@@ -107,10 +117,12 @@ Result: auto-center on load, and on orientation flip.
 
 The drumming-domain refinements I only wanted once I'd practiced with the app for a session.
 
-> - is it possible to make the sound louder - not the volume level on the device, but in the sound sample.
-> - we need to add pre-beat (what drummers do by hitting their drum sticks to prep for the tempo) so that there's time between starting by tapping and taking sticks and tuning to the beat and starting playing.
-> - rename "2x" to "2x support"
-> - add another checkbox next to "2x ..." to switch the "pre-beat" between 1 and 2 bars
+```
+- is it possible to make the sound louder - not the volume level on the device, but in the sound sample.
+- we need to add pre-beat (what drummers do by hitting their drum sticks to prep for the tempo) so that there's time between starting by tapping and taking sticks and tuning to the beat and starting playing.
+- rename "2x" to "2x support"
+- add another checkbox next to "2x ..." to switch the "pre-beat" between 1 and 2 bars
+```
 
 Result: louder samples, a stick-click count-in toggleable between one and two bars, "2× support" rename.
 
