@@ -1,4 +1,4 @@
-# Kickr — the missing drummer's metronome
+# Kikr — the missing drummer's metronome
 
 *An experiment in whether agentic development can deliver real quality — not just working code.*
 
@@ -21,11 +21,11 @@ Existing metronome apps miss what actually matters to a drummer — counting bar
 - AI also made some genuinely good suggestions along the way — screen wake lock was Claude's idea during brainstorming, not mine.
 - Solid usable result after an hour. A tool I'll open at every practice that follows.
 
-![Kickr v1, landscape on a phone](docs/kickr-v1.jpg)
+![Kikr v1, landscape on a phone](docs/kikr-v1.jpg)
 
-*Try it live: [ynovytskyy.github.io/kickr](https://ynovytskyy.github.io/kickr/)*
+*Try it live: [ynovytskyy.github.io/kikr](https://ynovytskyy.github.io/kikr/)*
 
-*Repo: [github.com/ynovytskyy/kickr](https://github.com/ynovytskyy/kickr)*
+*Repo: [github.com/ynovytskyy/kikr](https://github.com/ynovytskyy/kikr)*
 
 ## Phase 1 — PRD, plan, agents
 
